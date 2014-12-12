@@ -21,6 +21,40 @@ class Response
   send: (strings...) ->
     @robot.adapter.send @envelope, strings...
 
+  # Public: Posts a message asking the current user for a response.
+  #
+  # string   - String to be posted.
+  # key      - Optional String for the key to which the result will be assigned
+  #            within the context object. If not provided, a number will be used
+  # callback - Function to execute when the current user responds
+  #
+  # Returns nothing.
+  prompt: (string, key, callback) ->
+    context = {}
+    placeholder = 0
+    namespace = "#{@message.user.name}:#{@message.room}"
+
+    if conversation = @robot.conversations[namespace]
+      clearTimeout conversation.timeout
+      context = conversation.context
+      placeholder = conversation.placeholder
+
+    if typeof arguments[1] isnt 'string'
+      callback = arguments[1]
+      placeholder++
+      key = placeholder
+
+    @robot.conversations[namespace] =
+      currentKey: key
+      placeholder: placeholder
+      context: context
+      callback: callback
+      timeout: setTimeout =>
+        delete @robot.conversations[namespace]
+      , 30000
+
+    @reply string
+
   # Public: Posts an emote back to the chat source
   #
   # strings - One or more strings to be posted. The order of these strings

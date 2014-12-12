@@ -47,6 +47,8 @@ class Robot
     @Response  = Response
     @commands  = []
     @listeners = []
+    @conversations = []
+    @responseTokens = [/["']/,/["']/]
     @logger    = new Log process.env.HUBOT_LOG_LEVEL or 'info'
     @pingIntervalId = null
 
@@ -61,11 +63,36 @@ class Robot
     @adapterName   = adapter
     @errorHandlers = []
 
+    @setupResponseListener(@responseTokens)
+
     @on 'error', (err, msg) =>
       @invokeErrorHandlers(err, msg)
     process.on 'uncaughtException', (err) =>
       @emit 'error', err
 
+  # Public: Adds a Listener that triggers when a user responds to hubot with an answer.
+  #
+  # tokens - An Array that contains two regex values that are used to indicate
+  #          the beginning and end of an answer. The second regex is optional.
+  #
+  # Returns nothing.
+  setupResponseListener: (tokens) ->
+    leftToken = tokens[0].toString().split('/')
+    rightToken = tokens[1]?.toString().split('/') || ''
+    regex = new RegExp("\\s*#{leftToken[1]}\\s*(.*?)\\s*#{rightToken[1]||''}\\s*$", "i")
+    @respond regex, @handleUserResponse
+
+  # Private: If the user has an open conversation, execute the conversation
+  # callback with the user's answer and a context object
+  #
+  # msg - A message object
+  #
+  # Returns nothing.
+  handleUserResponse: (msg) ->
+    namespace = "#{msg.envelope.user.name}:#{msg.envelope.room}"
+    if conversation = msg.robot.conversations[namespace]
+      conversation.context[conversation.currentKey] = msg.match[1]
+      conversation.callback(msg, conversation.context)
 
   # Public: Adds a Listener that attempts to match incoming messages based on
   # a Regex.
@@ -192,6 +219,7 @@ class Robot
   # Returns nothing.
   receive: (message) ->
     results = []
+
     for listener in @listeners
       try
         results.push listener.call(message)
