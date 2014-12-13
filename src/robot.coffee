@@ -90,9 +90,11 @@ class Robot
   # Returns nothing.
   handleUserResponse: (msg) ->
     namespace = "#{msg.envelope.user.name}:#{msg.envelope.room}"
-    if conversation = msg.robot.conversations[namespace]
+    conversation = msg.robot.conversations[namespace]
+    if conversation.callback?
       conversation.context[conversation.currentKey] = msg.match[1]
       conversation.callback(msg, conversation.context)
+      delete msg.robot.conversations[namespace].callback
 
   # Public: Adds a Listener that attempts to match incoming messages based on
   # a Regex.
