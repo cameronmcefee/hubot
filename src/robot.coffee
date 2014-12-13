@@ -48,7 +48,7 @@ class Robot
     @commands  = []
     @listeners = []
     @conversations = []
-    @responseTokens = [/["']/,/["']/]
+    @responseTokens = [/>/]
     @logger    = new Log process.env.HUBOT_LOG_LEVEL or 'info'
     @pingIntervalId = null
 
